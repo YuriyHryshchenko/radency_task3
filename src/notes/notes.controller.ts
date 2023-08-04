@@ -8,8 +8,8 @@ import {
   Patch,
 } from '@nestjs/common';
 import { NoteService } from './notes.service';
-import { NewNote } from 'src/mockedData';
 import { noteSchema } from 'src/helpers/note.schema';
+import { CreateNoteDto } from './dto/create-note.dto';
 
 @Controller('notes')
 export class NotesController {
@@ -20,10 +20,6 @@ export class NotesController {
     return this.noteService.getStats();
   }
 
-  @Get('archived')
-  getArchivedNotes() {
-    return this.noteService.getArchivedNotes();
-  }
 
   @Get()
   getNotes() {
@@ -31,34 +27,25 @@ export class NotesController {
   }
 
   @Get(':id')
-  getNoteById(@Param('id') id: string) {
+  getNoteById(@Param('id') id: number) {
     return this.noteService.getNoteById(id);
   }
 
   @Post()
-  async createNote(@Body() note: NewNote) {
+  async createNote(@Body() note: CreateNoteDto) {
     await noteSchema.validate(note);
-    this.noteService.createNote(note);
+    return this.noteService.createNote(note);
   }
 
   @Delete(':id')
-  deleteNote(@Param('id') id: string) {
-    this.noteService.deleteNote(id);
+  deleteNote(@Param('id') id: number) {
+    return this.noteService.deleteNoteById(id);
   }
 
   @Patch(':id')
-  async updateNote(@Param('id') id: string, @Body() note: NewNote) {
+  async updateNote(@Param('id') id: number, @Body() note: CreateNoteDto) {
     await noteSchema.validate(note);
-    this.noteService.updateNote(id, note);
+    return this.noteService.updateNoteById(id, note);
   }
 
-  @Patch(':id/archive')
-  archiveNote(@Param('id') id: string) {
-    this.noteService.archiveNote(id);
-  }
-
-  @Patch(':id/unarchive')
-  unarchiveNote(@Param('id') id: string) {
-    this.noteService.unarchiveNote(id);
-  }
 }

@@ -1,85 +1,57 @@
-import { Injectable } from '@nestjs/common';
-import { mockedData, Note, NewNote, archivedData } from '../mockedData';
-import { v4 as uuidv4 } from 'uuid';
+import { Injectable } from "@nestjs/common";
+import { Note } from "./notes.model";
+import { InjectModel } from "@nestjs/sequelize";
+import { CreateNoteDto } from "./dto/create-note.dto";
 
 @Injectable()
 export class NoteService {
-  private notes: Note[] = mockedData;
-  private archivedNotes: Note[] = archivedData;
+  constructor(@InjectModel(Note) private noteRepository: typeof Note) {}
 
-  getNotes() {
-    return this.notes;
-  }
-
-  getNoteById(id: string) {
-    const noteIndex = this.notes.findIndex((item) => item.id === id);
-    return this.notes[noteIndex];
-  }
-
-  createNote(note: NewNote) {
-    const timeOfCreation = new Date().toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+  async createNote(note: CreateNoteDto) {
+    const timeOfCreation = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
-    const newNote = {
-      id: uuidv4(),
+
+    const noteObj = {
       timeOfCreation,
-      ...note,
-      date: [note.date],
-    };
-    this.notes.push(newNote);
+      ...note
+    }
+    const newNote = await this.noteRepository.create(noteObj);
+    return newNote;
+
   }
 
-  updateNote(id: string, newNote: NewNote) {
-    const noteIndex = this.notes.findIndex((item) => item.id === id);
-    const note = {
-      ...this.notes[noteIndex],
-      ...newNote,
-      date: [...this.notes[noteIndex].date, newNote.date],
-    };
-    this.notes.splice(noteIndex, 1, note);
+  async getNotes(){
+    const notes = await this.noteRepository.findAll();
+    return notes;
   }
 
-  deleteNote(id: string) {
-    const noteIndex = this.notes.findIndex((item) => item.id === id);
-    this.notes.splice(noteIndex, 1);
+  async getNoteById(id: number) {
+    const note = await this.noteRepository.findByPk(id);
+    return note;
   }
 
-  archiveNote(id: string) {
-    const noteIndex = this.notes.findIndex((item) => item.id === id);
-    this.archivedNotes.push(this.notes[noteIndex]);
-    this.notes.splice(noteIndex, 1);
+  async deleteNoteById(id: number){
+      const deletedNote = await this.noteRepository.destroy({where: {id: id}});
+      return deletedNote;
+  }
+  
+  async updateNoteById(id: number, note: CreateNoteDto) {
+    const updatedNote = await this.noteRepository.update(note, {where: {id: id}});
+    return updatedNote;
   }
 
-  unarchiveNote(id: string) {
-    const noteIndex = this.archivedNotes.findIndex((item) => item.id === id);
-    this.notes.push(this.archivedNotes[noteIndex]);
-    this.archivedNotes.splice(noteIndex, 1);
-  }
-
-  getStats() {
+  async getStats() {
     const categoriesActive = new Map<string, number>();
-    const categoriesArchived = new Map<string, number>();
+    const notes = await this.getNotes();
 
-    this.notes.forEach((note) => {
+    notes.forEach((note) => {
       const categoryCount = categoriesActive.get(note.category) || 0;
       categoriesActive.set(note.category, categoryCount + 1);
     });
     const sumActive = Object.fromEntries(categoriesActive);
-
-    this.archivedNotes.forEach((note) => {
-      const categoryCount = categoriesArchived.get(note.category) || 0;
-      categoriesArchived.set(note.category, categoryCount + 1);
-    });
-    const sumArchived = Object.fromEntries(categoriesArchived);
-    return {
-      sumActive,
-      sumArchived,
-    };
-  }
-
-  getArchivedNotes() {
-    return this.archivedNotes;
+    return sumActive;
   }
 }
